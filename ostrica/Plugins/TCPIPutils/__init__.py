@@ -20,18 +20,11 @@
 #				You should have received a copy of the GNU General Public License
 #				along with OSTrICa. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-import sys
-if sys.version_info < (3, 0):
-    import httplib
-    import StringIO
-else:
-    import http.client as httplib
-    import io as StringIO
-import gzip
 import re
 from bs4 import BeautifulSoup
 
 from ostrica.utilities.cfg import Config as cfg
+import ostrica.utilities.utilities as utils
 
 extraction_type = [cfg.intelligence_type['domain'], cfg.intelligence_type['asn']]
 enabled = True
@@ -57,52 +50,21 @@ class TCPIPUtils(object):
         self.intelligence = {}
 
     def asn_information(self, asn):
-        query = '/browse/as/%s' % (asn)
-        hhandle = httplib.HTTPConnection(self.asn_host, timeout=cfg.timeout)
-        hhandle.putrequest('GET', query)
-        hhandle.putheader('Connection', 'keep-alive')
-        hhandle.putheader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
-        hhandle.putheader('Accept-Encoding', 'gzip, deflate, sdch')
-        hhandle.putheader('User-Agent', cfg.user_agent)
-        hhandle.putheader('Accept-Language', 'en-GB,en-US;q=0.8,en;q=0.6')
-        hhandle.endheaders()
-
-        response = hhandle.getresponse()
-        if (response.status == 200):
-            if response.getheader('Content-Encoding') == 'gzip':
-                content = StringIO.StringIO(response.read())
-                server_response = gzip.GzipFile(fileobj=content).read()
-                if (server_response.find('No valid IPv4 address found!') != 1):
-                    self.extract_asn_intelligence(server_response)
-                    return True
-                else:
-                    return False
-        else:
-            return False
+        page = utils.get_page(self.asn_host, '/browse/as/%s'%asn)
+        if page:
+            if (page.find('No valid IPv4 address found!') != 1):
+                self.extract_asn_intelligence(server_response)
+                return True
+        return False
 
     def domain_information(self, domain):
         query = '/plugin.php?version=%s&type=ipv4info&hostname=%s&source=chromeext&extversion=%s' % (self.version, domain, self.extversion)
-        hhandle = httplib.HTTPSConnection(self.host, timeout=cfg.timeout)
-        hhandle.putrequest('GET', query)
-        hhandle.putheader('Connection', 'keep-alive')
-        hhandle.putheader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
-        hhandle.putheader('Accept-Encoding', 'gzip, deflate, sdch')
-        hhandle.putheader('User-Agent', cfg.user_agent)
-        hhandle.putheader('Accept-Language', 'en-GB,en-US;q=0.8,en;q=0.6')
-        hhandle.endheaders()
-
-        response = hhandle.getresponse()
-        if (response.status == 200):
-            if response.getheader('Content-Encoding') == 'gzip':
-                content = StringIO.StringIO(response.read())
-                server_response = gzip.GzipFile(fileobj=content).read()
-                if (server_response.find('No valid IPv4 address found!') != 1):
-                    self.extract_domain_intelligence(server_response)
-                    return True
-                else:
-                    return False
-        else:
-            return False
+        page = utils.get_page(self.asn_host, query, SSL=True)
+        if page:
+            if (page.find('No valid IPv4 address found!') != 1):
+                self.extract_domain_intelligence(server_response)
+                return True
+        return False
 
     def extract_domain_intelligence(self, server_response):
         ip_address = False

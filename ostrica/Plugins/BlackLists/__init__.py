@@ -20,28 +20,8 @@
 #				You should have received a copy of the GNU General Public License
 #				along with OSTrICa. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-import sys
-if sys.version_info < (3, 0):
-    import httplib
-    import StringIO
-else:
-    import http.client as httplib
-    import io as StringIO
-import gzip
-
-def get_zip_obj(data):
-    if sys.version_info < (3, 0):
-        return StringIO.StringIO(data)
-    else:
-        return StringIO.BytesIO(data)
-  return data
-
-def str_if_bytes(data):
-    if type(data) == bytes:
-        return data.decode("utf-8")
-    return data
-
 from ostrica.utilities.cfg import Config as cfg
+import ostrica.utilities.utilities as utils
 
 extraction_type = [cfg.intelligence_type['domain'], cfg.intelligence_type['ip']]
 enabled = True
@@ -51,7 +31,6 @@ description = 'Plugin used to check if a domain or an ip is blacklisted'
 visual_data = False
 
 class BlackListChecker:
-
     emerging_threats_host = 'rules.emergingthreats.net'
     alienvault_host = 'reputation.alienvault.com'
     tor_nodes_host =  'torstatus.blutmagie.de'
@@ -70,26 +49,10 @@ class BlackListChecker:
         self.intelligence = {}
 
     def _check_page(self, domain, query):
-        hhandle = httplib.HTTPConnection(domain, timeout=cfg.timeout)
-        hhandle.putrequest('GET', query)
-        hhandle.putheader('Connection', 'keep-alive')
-        hhandle.putheader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
-        hhandle.putheader('Accept-Encoding', 'gzip, deflate, sdch')
-        hhandle.putheader('User-Agent', cfg.user_agent)
-        hhandle.putheader('Accept-Language', 'en-GB,en-US;q=0.8,en;q=0.6')
-        hhandle.endheaders()
-
-        response = hhandle.getresponse()
-        if response.status == 200:
-            if response.getheader('Content-Encoding') == 'gzip':
-                content = get_zip_obj(response.read())
-                server_response = str_if_bytes(gzip.GzipFile(fileobj=content).read())
-                if self.host_to_check in server_response:
-                    return True
-            else:
-                server_response = str_if_bytes(response.read())
-                if self.host_to_check in server_response:
-                    return True
+        page = utils.get_page(domain, query)
+        if page: 
+            if self.host_to_check in page:
+                return True
         return False
 
     def check_blacklist(self, host):
@@ -100,7 +63,6 @@ class BlackListChecker:
         self.intelligence['de_blocklist'] = self.de_blocklist()
         self.intelligence['dragon_research'] = self.dragon_research_bl()
         self.intelligence['bambenekconsulting'] = self.bambenekconsulting_feed()
-
 
     def emerging_threats(self):
         return self._check_page(self.emerging_threats_host, '/blockrules/compromised-ips.txt')

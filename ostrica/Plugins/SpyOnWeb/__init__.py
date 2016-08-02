@@ -20,15 +20,11 @@
 #				You should have received a copy of the GNU General Public License
 #				along with OSTrICa. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-import sys
-if sys.version_info < (3, 0):
-    import httplib
-else:
-    import http.client as httplib
 
 from bs4 import BeautifulSoup
 
 from ostrica.utilities.cfg import Config as cfg
+import ostrica.utilities.utilities as utils
 
 extraction_type = [cfg.intelligence_type['ip'], cfg.intelligence_type['domain']]
 enabled = True
@@ -116,26 +112,12 @@ class SpyOnWeb:
         pass
 
     def extract_server_info(self, data_to_analyze):
-        query = '/%s' % (data_to_analyze)
-        hhandle = httplib.HTTPConnection(self.host, timeout=cfg.timeout)
-        hhandle.putrequest('GET', query)
-        hhandle.putheader('Connection', 'keep-alive')
-        hhandle.putheader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
-        hhandle.putheader('referer', 'http://spyonweb.com')
-        hhandle.putheader('Accept-Encoding', 'gzip, deflate, sdch')
-        hhandle.putheader('User-Agent', cfg.user_agent)
-        hhandle.putheader('Accept-Language', 'en-GB,en-US;q=0.8,en;q=0.6')
-        hhandle.endheaders()
-
-        response = hhandle.getresponse()
-        if response.status == 200:
-            self.server_response = response.read()
+        page = utils.get_page(self.host, '/%s'%data_to_analyze)
+        if page:
+            self.server_response = page
             if self.extract_intelligence() != False:
                 return True
-            else:
-                return False
-        else:
-            return False
+        return False
 
 
 def run(intelligence, extraction_type):

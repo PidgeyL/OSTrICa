@@ -67,18 +67,21 @@ class ThreatCrowd:
                 self.intelligence['scans'] = intel['scans']
 
     def extract_intelligence(self, typology, intel):
-        if cfg.threat_crowd_limit:
-            time.sleep(cfg.threat_crowd_limit_seconds)
-        if typology == 'domain' or typology == 'ip' or typology == 'email':
-            query = 'https://www.threatcrowd.org/searchApi/v2/%s/report/' % (typology)
-            returned_intel = json.loads(requests.get(query, params={typology: intel}).text)
-            self.fill_intelligence_dictionary(returned_intel)
-        elif typology == 'md5':
-            query = 'https://www.threatcrowd.org/searchApi/v2/file/report/'
-            returned_intel = json.loads(requests.get(query, params={'resource': intel}).text)
-            self.fill_intelligence_dictionary(returned_intel)
-
-        return self.intelligence
+        try:
+            if cfg.threat_crowd_limit:
+                time.sleep(cfg.threat_crowd_limit_seconds)
+            if typology == 'domain' or typology == 'ip' or typology == 'email':
+                query = 'https://www.threatcrowd.org/searchApi/v2/%s/report/' % (typology)
+                returned_intel = json.loads(requests.get(query, params={typology: intel}).text)
+                self.fill_intelligence_dictionary(returned_intel)
+            elif typology == 'md5':
+                query = 'https://www.threatcrowd.org/searchApi/v2/file/report/'
+                returned_intel = json.loads(requests.get(query, params={'resource': intel}).text)
+                self.fill_intelligence_dictionary(returned_intel)
+            return self.intelligence
+        except:
+            print("Couldn't reach threatcrowd.org")
+            return None
 
 def run(intelligence, extraction_type):
     if cfg.DEBUG:

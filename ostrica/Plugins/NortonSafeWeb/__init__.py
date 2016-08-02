@@ -20,14 +20,8 @@
 #				You should have received a copy of the GNU General Public License
 #				along with OSTrICa. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-import sys
-if sys.version_info < (3, 0):
-    import httplib
-else:
-    import http.client as httplib
-import ssl
-
 from ostrica.utilities.cfg import Config as cfg
+import ostrica.utilities.utilities as utils
 
 extraction_type = [cfg.intelligence_type['ip'], cfg.intelligence_type['domain']]
 enabled = True
@@ -36,15 +30,11 @@ developer = 'Roberto Sponchioni <rsponchioni@yahoo.it>'
 description = 'Plugin used to check if a domain or an ip is in SafeWeb'
 visual_data = False
 
-def str_if_bytes(data):
-    if type(data) == bytes:
-        return data.decode("utf-8")
-    return data
-
 class NortonSafeWeb:
 
     def __init__(self):
         self.safeweb_host = 'safeweb.norton.com'
+        self.safeweb_ref  = 'safeweb.norton.com'
         self.intelligence = {}
         self.server_response = ''
         pass
@@ -65,28 +55,15 @@ class NortonSafeWeb:
             self.intelligence['safeweb'] = ''
         return True
 
-    def extract_server_info(self, data_to_analyze):
-        ssl_context = ssl._create_unverified_context()
-        query = '/report/show_mobile?name=%s' % (data_to_analyze)
-        hhandle = httplib.HTTPSConnection(self.safeweb_host, context=ssl_context, timeout=cfg.timeout)
-        hhandle.putrequest('GET', query)
-        hhandle.putheader('Connection', 'keep-alive')
-        hhandle.putheader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
-        hhandle.putheader('referer', 'https://safeweb.norton.com/rate_limit')
-        hhandle.putheader('Accept-Encoding', 'gzip, deflate, sdch')
-        hhandle.putheader('User-Agent', cfg.user_agent)
-        hhandle.putheader('Accept-Language', 'en-GB,en-US;q=0.8,en;q=0.6')
-        hhandle.endheaders()
-
-        response = hhandle.getresponse()
-        if response.status == 200:
-            self.server_response = str_if_bytes(response.read())
+    def extract_server_info(self, data):
+        page = utils.get_page(self.safeweb_host,
+                              '/report/show_mobile?name=%s'%data,
+                              SSL=True, ref=self.safeweb_ref)
+        if page:
+            self.server_response = page
             if self.extract_intelligence() != False:
                 return True
-            else:
-                return False
-        else:
-            return False
+        return False
 
 
 def run(intelligence, extraction_type):

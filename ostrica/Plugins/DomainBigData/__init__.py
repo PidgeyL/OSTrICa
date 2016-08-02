@@ -20,18 +20,10 @@
 #				You should have received a copy of the GNU General Public License
 #				along with OSTrICa. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-import sys
-if sys.version_info < (3, 0):
-    import httplib
-    import StringIO
-else:
-    import http.client as httplib
-    import io as StringIO
-import gzip
-
 from bs4 import BeautifulSoup
 
 from ostrica.utilities.cfg import Config as cfg
+import ostrica.utilities.utilities as utils
 
 extraction_type = [cfg.intelligence_type['domain'], cfg.intelligence_type['email']]
 enabled = True
@@ -56,27 +48,11 @@ class DomainBigData:
         self.intelligence = {}
 
     def email_information(self, email):
-        query = '/email/%s' % (email)
-        hhandle = httplib.HTTPConnection(self.host, timeout=cfg.timeout)
-        hhandle.putrequest('GET', query)
-        hhandle.putheader('Connection', 'keep-alive')
-        hhandle.putheader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
-        hhandle.putheader('Accept-Encoding', 'gzip, deflate, sdch')
-        hhandle.putheader('User-Agent', cfg.user_agent)
-        hhandle.putheader('Accept-Language', 'en-GB,en-US;q=0.8,en;q=0.6')
-        hhandle.endheaders()
-
-        response = hhandle.getresponse()
-        if (response.status == 200):
-            if response.getheader('Content-Encoding') == 'gzip':
-                content = StringIO.StringIO(response.read())
-                server_response = gzip.GzipFile(fileobj=content).read()
-                self.collect_email_intelligence(server_response)
-                return True
-            else:
-                return False
-        else:
-            return False
+        page = utils.get_page(self.host, "/email/%s"%email)
+        if page:
+            self.collect_email_intelligence(page)
+            return True
+        return False
 
     def collect_email_intelligence(self, server_response):
         soup = BeautifulSoup(server_response, 'html.parser')
@@ -107,27 +83,11 @@ class DomainBigData:
 
 
     def domain_information(self, domain):
-        query = '/%s' % (domain)
-        hhandle = httplib.HTTPConnection(self.host, timeout=cfg.timeout)
-        hhandle.putrequest('GET', query)
-        hhandle.putheader('Connection', 'keep-alive')
-        hhandle.putheader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
-        hhandle.putheader('Accept-Encoding', 'gzip, deflate, sdch')
-        hhandle.putheader('User-Agent', cfg.user_agent)
-        hhandle.putheader('Accept-Language', 'en-GB,en-US;q=0.8,en;q=0.6')
-        hhandle.endheaders()
-
-        response = hhandle.getresponse()
-        if (response.status == 200):
-            if response.getheader('Content-Encoding') == 'gzip':
-                content = StringIO.StringIO(response.read())
-                server_response = gzip.GzipFile(fileobj=content).read()
-                self.collect_domain_intelligence(server_response)
-                return True
-            else:
-                return False
-        else:
-            return False
+        page = utils.get_page(self.host, "/%s"%domain)
+        if page:
+            self.collect_domain_intelligence(server_response)
+            return True
+        return False
 
     def collect_domain_intelligence(self, server_response):
         soup = BeautifulSoup(server_response, 'html.parser')
@@ -227,27 +187,11 @@ class DomainBigData:
 
 
     def related_domains_information(self, domain):
-        query = '/name/%s' % (domain)
-        hhandle = httplib.HTTPConnection(self.host, timeout=cfg.timeout)
-        hhandle.putrequest('GET', query)
-        hhandle.putheader('Connection', 'keep-alive')
-        hhandle.putheader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
-        hhandle.putheader('Accept-Encoding', 'gzip, deflate, sdch')
-        hhandle.putheader('User-Agent', cfg.user_agent)
-        hhandle.putheader('Accept-Language', 'en-GB,en-US;q=0.8,en;q=0.6')
-        hhandle.endheaders()
-
-        response = hhandle.getresponse()
-        if (response.status == 200):
-            if response.getheader('Content-Encoding') == 'gzip':
-                content = StringIO.StringIO(response.read())
-                server_response = gzip.GzipFile(fileobj=content).read()
-                self.collect_domain_related_intelligence(server_response)
-                return True
-            else:
-                return False
-        else:
-            return False
+        page = utils.get_page(self.host, "/name/%s"%domain)
+        if page:
+            self.collect_domain_related_intelligence(page)
+            return True
+        return False
 
     def collect_domain_related_intelligence(self, server_response):
         soup = BeautifulSoup(server_response, 'html.parser')

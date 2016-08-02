@@ -20,18 +20,10 @@
 #				You should have received a copy of the GNU General Public License
 #				along with OSTrICa. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-import sys
-if sys.version_info < (3, 0):
-    import httplib
-    import StringIO
-else:
-    import http.client as httplib
-    import io as StringIO
-import gzip
-
 import json
 
 from ostrica.utilities.cfg import Config as cfg
+import ostrica.utilities.utilities as utils
 
 extraction_type = [cfg.intelligence_type['ip'], cfg.intelligence_type['domain'], cfg.intelligence_type['asn']]
 enabled = True
@@ -39,18 +31,6 @@ version = 0.1
 developer = 'Roberto Sponchioni <rsponchioni@yahoo.it>'
 description = 'Plugin used to collect information about IPs, domains or ASNs on SafeBrowsing'
 visual_data = True
-
-def get_zip_obj(data):
-    if sys.version_info < (3, 0):
-        return StringIO.StringIO(data)
-    else:
-        return StringIO.BytesIO(data)
-    return data
-
-def str_if_bytes(data):
-    if type(data) == bytes:
-        return data.decode("utf-8")
-    return data
 
 class SafeBrowsing:
 
@@ -84,27 +64,13 @@ class SafeBrowsing:
 
     def extract_server_info(self, data_to_analyze):
         query = '/safebrowsing/diagnostic?output=jsonp&site=%s' % (data_to_analyze)
-        hhandle = httplib.HTTPSConnection(self.safebrowsing_host, timeout=cfg.timeout)
-        hhandle.putrequest('GET', query)
-        hhandle.putheader('Connection', 'keep-alive')
-        hhandle.putheader('Accept', '*/*')
-        hhandle.putheader('referer', 'https://www.google.com/transparencyreport/safebrowsing/diagnostic/index.html')
-        hhandle.putheader('Accept-Encoding', 'gzip, deflate, sdch')
-        hhandle.putheader('User-Agent', cfg.user_agent)
-        hhandle.putheader('Accept-Language', 'en-GB,en-US;q=0.8,en;q=0.6')
-        hhandle.endheaders()
-
-        response = hhandle.getresponse()
-        if response.status == 200:
-            if response.getheader('Content-Encoding') == 'gzip':
-                content = get_zip_obj(response.read())
-                if self.extract_json(str_if_bytes(gzip.GzipFile(fileobj=content).read())) != False:
-                    self.extract_intelligence()
-                    return True
-                else:
-                    return False
-        else:
-            return False
+        ref   = 'https://www.google.com/transparencyreport/safebrowsing/diagnostic/index.html'
+        page  = utils.get_page(self.safebrowsing_host, query, SSL=True, ref=ref)
+        if page:
+            if self.extract_json(page) != False:
+                self.extract_intelligence()
+                return True
+        return False
 
 
 def run(intelligence, extraction_type):

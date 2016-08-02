@@ -20,14 +20,10 @@
 #				You should have received a copy of the GNU General Public License
 #				along with OSTrICa. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-import sys
-if sys.version_info < (3, 0):
-    import httplib
-else:
-    import http.client as httplib
 from bs4 import BeautifulSoup
 
 from ostrica.utilities.cfg import Config as cfg
+import ostrica.utilities.utilities as utils
 
 extraction_type = [cfg.intelligence_type['email']]
 enabled = True
@@ -43,7 +39,6 @@ class WebSiteInformer:
     def __init__(self):
         self.intelligence = {}
         self.related_websites = []
-        pass
 
     def __del__(self):
         if cfg.DEBUG:
@@ -51,24 +46,11 @@ class WebSiteInformer:
         self.intelligence = {}
 
     def email_information(self, email):
-        query = '/email/%s' % (email)
-        hhandle = httplib.HTTPConnection(self.host, timeout=cfg.timeout)
-        hhandle.putrequest('GET', query)
-        hhandle.putheader('Connection', 'keep-alive')
-        hhandle.putheader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
-        hhandle.putheader('Accept-Encoding', 'gzip, deflate, sdch')
-        hhandle.putheader('User-Agent', cfg.user_agent)
-        hhandle.putheader('Accept-Language', 'en-GB,en-US;q=0.8,en;q=0.6')
-        hhandle.endheaders()
-
-        response = hhandle.getresponse()
-
-        if (response.status == 200):
-            server_response = response.read()
-            self.collect_intelligence(server_response)
+        page = utils.get_page(self.host, '/email/%s'%email)
+        if page:
+            self.collect_intelligence(page)
             return True
-        else:
-            return False
+        return False
 
     def collect_intelligence(self, server_response):
         soup = BeautifulSoup(server_response, 'html.parser')
@@ -147,7 +129,7 @@ class WebSiteInformerVisual:
         if self.json_data['intelligence'] is None:
             return False
 
-        for key, value in self.json_data['intelligence']['intelligence_information'].iteritems():
+        for key, value in self.json_data['intelligence']['intelligence_information'].items():
             if key == 'related_websites':
                 related_websites = value
             elif key.startswith('registrant_'):
@@ -165,7 +147,7 @@ class WebSiteInformerVisual:
 
     def parse_visual_data(self):
         for intel in self.visual_report_dictionary[self.origin]['WebSiteInformer']:
-            for key, value in intel.iteritems():
+            for key, value in intel.items():
                 if key == 'related_websites':
                     self._manage_websiteinformer_relatedwebsites(value)
                 elif key == 'companies':

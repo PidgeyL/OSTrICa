@@ -20,13 +20,8 @@
 #				You should have received a copy of the GNU General Public License
 #				along with OSTrICa. If not, see <http://www.gnu.org/licenses/>.
 #-------------------------------------------------------------------------------
-import sys
-if sys.version_info < (3, 0):
-    import httplib
-else:
-    import http.client as httplib
-
 from ostrica.utilities.cfg import Config as cfg
+import ostrica.utilities.utilities as utils
 
 extraction_type = [cfg.intelligence_type['ip']]
 enabled = True
@@ -55,22 +50,12 @@ class WhoisXmlApi:
 
     def whois(self, domain):
         query = '/whoisserver/WhoisService?domainName=%s&outputFormat=json' % (domain)
-        hhandle = httplib.HTTPConnection(self.host, timeout=cfg.timeout)
-        hhandle.putrequest('GET', query)
-        hhandle.putheader('Connection', 'keep-alive')
-        hhandle.putheader('Accept', '*/*')
-        hhandle.putheader('Accept-Encoding', 'gzip, deflate, sdch')
-        hhandle.putheader('User-Agent', cfg.user_agent)
-        hhandle.putheader('Accept-Language', 'en-GB,en-US;q=0.8,en;q=0.6')
-        hhandle.endheaders()
+        page = utils.get_page(self.host, query)
 
-        response = hhandle.getresponse()
-        if response.status == 200:
-            self.intelligence['whois'] = str_if_bytes(response.read()).replace('\n', '')
+        if page:
+            self.intelligence['whois'] = page.replace('\n', '')
             return True
-        else:
-            return False
-
+        return False
 
 def run(intelligence, extraction_type):
     if cfg.DEBUG:
